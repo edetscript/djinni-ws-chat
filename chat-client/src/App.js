@@ -80,7 +80,6 @@ const App = () => {
         <div className="chat-header">
           <h1>Group Chat</h1>
         </div>
-        {console.log(messages)}
         <div className="chat-window">
           {messages.map((msg, index) => (
             <div

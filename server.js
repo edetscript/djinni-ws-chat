@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const WebSocket = require("ws");
 const multer = require("multer");
 const cors = require("cors");
-const path = require("path");
+const aws = require("aws-sdk");
 
 const app = express();
 const server = require("http").createServer(app);
@@ -12,7 +12,6 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 1234;
 const MONGODB_URI = process.env.MONGODB_URI;
-const UPLOAD_DIR = process.env.UPLOAD_DIR;
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
@@ -29,23 +28,35 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model("Message", messageSchema);
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
+const s3 = new aws.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage: multer.memoryStorage(),
+}).single("file");
 
 app.use(cors());
-app.use(express.static(UPLOAD_DIR));
 app.use(express.json());
 
-app.post("/upload", upload.single("file"), (req, res) => {
-  res.json({ file: req.file.filename });
+app.post("/upload", upload, async (req, res) => {
+  const file = req.file;
+
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Key: file.originalname,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+  };
+
+  try {
+    const data = await s3.upload(params).promise();
+    res.json({ fileUrl: data.Location });
+  } catch (error) {
+    console.error("Error uploading file to S3:", error);
+    res.status(500).json({ error: "Failed to upload file to S3" });
+  }
 });
 
 app.get("/messages", async (req, res) => {
