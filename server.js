@@ -22,6 +22,7 @@ const messageSchema = new mongoose.Schema({
   username: String,
   message: String,
   fileUrl: String,
+  fileName: String,
   file: String,
   timestamp: { type: Date, default: Date.now },
 });

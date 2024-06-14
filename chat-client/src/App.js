@@ -4,6 +4,7 @@ import "./App.css";
 const App = () => {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState(null);
   const [username, setUsername] = useState(
     localStorage.getItem("username") || ""
@@ -31,8 +32,9 @@ const App = () => {
   }, []);
 
   const sendMessage = async () => {
-    let fileName = "";
+    setIsUploading(true);
     let fileUrl = "";
+    let fileName = "";
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
@@ -41,8 +43,9 @@ const App = () => {
         body: formData,
       });
       const data = await response.json();
-      fileName = data.file;
-      fileUrl = `${process.env.REACT_APP_API_URL}/${data.file}`;
+
+      fileUrl = data.fileUrl;
+      fileName = file.name;
     }
 
     const messageData = { username, message, fileUrl, fileName };
@@ -50,6 +53,7 @@ const App = () => {
     ws.current.send(JSON.stringify(messageData));
     setMessage("");
     setFile(null);
+    setIsUploading(false);
   };
 
   const handleUsernameSubmit = () => {
@@ -95,13 +99,25 @@ const App = () => {
               {msg.message}
               {msg.fileUrl && (
                 <div>
-                  <a
-                    href={msg.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {msg.fileName}
-                  </a>
+                  {[".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"].some(
+                    (ext) => msg?.fileName?.toLowerCase().endsWith(ext)
+                  ) ? (
+                    <a
+                      href={msg.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img src={msg.fileUrl} alt={msg.fileName} width="80px" />
+                    </a>
+                  ) : (
+                    <a
+                      href={msg.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {msg.fileName}
+                    </a>
+                  )}
                 </div>
               )}
             </div>
@@ -115,7 +131,7 @@ const App = () => {
           />
           <input type="file" onChange={(e) => setFile(e.target.files[0])} />
           <button onClick={sendMessage} disabled={!message && !file}>
-            Send
+            {isUploading ? "Sending..." : "Send"}
           </button>
         </div>
       </div>
