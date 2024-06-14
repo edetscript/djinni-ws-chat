@@ -9,9 +9,28 @@ const App = () => {
   const [username, setUsername] = useState(
     localStorage.getItem("username") || ""
   );
+  const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleTextareaChange = (e) => {
+    setMessage(e.target.value);
+    autoGrowTextarea();
+  };
+
   const [isUsernameSet, setIsUsernameSet] = useState(
     !!localStorage.getItem("username")
   );
+
+  const autoGrowTextarea = () => {
+    const textarea = textareaRef.current;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  };
+
   const ws = useRef(null);
 
   useEffect(() => {
@@ -56,6 +75,10 @@ const App = () => {
     setIsUploading(false);
   };
 
+  useEffect(() => {
+    autoGrowTextarea();
+  }, [message]);
+
   const handleUsernameSubmit = () => {
     localStorage.setItem("username", username);
     setIsUsernameSet(true);
@@ -82,7 +105,7 @@ const App = () => {
     <div className="App">
       <div className="chat-container">
         <div className="chat-header">
-          <h1>Group Chat</h1>
+          <h1>Открыть чат</h1>
         </div>
         <div className="chat-window">
           {messages.map((msg, index) => (
@@ -98,41 +121,88 @@ const App = () => {
               <br />
               {msg.message}
               {msg.fileUrl && (
-                <div>
+                <ul>
                   {[".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"].some(
                     (ext) => msg?.fileName?.toLowerCase().endsWith(ext)
                   ) ? (
-                    <a
-                      href={msg.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <img src={msg.fileUrl} alt={msg.fileName} width="80px" />
-                    </a>
+                    <li>
+                      <a
+                        href={msg.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <img
+                          className="uploaded-image"
+                          src={msg.fileUrl}
+                          alt={msg.fileName}
+                          width="80px"
+                        />
+                      </a>
+                    </li>
                   ) : (
-                    <a
-                      href={msg.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {msg.fileName}
-                    </a>
+                    <li className="uploaded-file">
+                      <a
+                        href={msg.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {msg.fileName}
+                      </a>
+                    </li>
                   )}
-                </div>
+                </ul>
               )}
             </div>
           ))}
         </div>
-        <div className="chat-input">
-          <textarea
-            placeholder="Type your message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+        <div className="chat-input-wrapper">
+          <div className="chat-editor-upload">
+            <button
+              className="plus-icon"
+              onClick={handleUploadClick}
+              title="Загрузить файл"
+            >
+              <svg
+                enable-background="new 0 0 24 24"
+                height="20"
+                viewBox="0 0 24 24"
+                width="20"
+                focusable="false"
+              >
+                <g>
+                  <rect fill="none" height="20" width="20"></rect>
+                </g>
+                <g>
+                  <g>
+                    <g>
+                      <path d="M6,2C4.9,2,4.01,2.9,4.01,4L4,20c0,1.1,0.89,2,1.99,2H18c1.1,0,2-0.9,2-2V8l-6-6H6z M13,9V3.5L18.5,9H13z"></path>
+                    </g>
+                  </g>
+                </g>
+              </svg>
+            </button>
+          </div>
+          <div className="padding-10">
+            <div className="chat-input">
+              <textarea
+                ref={textareaRef}
+                placeholder="Введите сообщение..."
+                value={message}
+                onChange={handleTextareaChange}
+              />
+
+              <button onClick={sendMessage} disabled={!message && !file}>
+                {isUploading ? "Отправка..." : "Отправлять"}
+              </button>
+            </div>
+            <small>{file?.name}</small>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={(e) => setFile(e.target.files[0])}
           />
-          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-          <button onClick={sendMessage} disabled={!message && !file}>
-            {isUploading ? "Sending..." : "Send"}
-          </button>
+          </div>
         </div>
       </div>
     </div>
